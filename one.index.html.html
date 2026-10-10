@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>滑坡 & 泥石流 原理实验室</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#080d18; --panel:#111a2c; --panel2:#18233a; --bd:#26344f;
+    --tx:#e6ecf5; --mut:#8798b3; --ac:#38bdf8; --dg:#f87171;
+    --wn:#fbbf24; --ok:#4ade80;
+  }
+  body{
+    font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1200px 700px at 50% -10%,#16233d 0%,#080d18 65%);
+    color:var(--tx); min-height:100vh; padding:22px 18px 60px;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+
+  header{text-align:center;margin-bottom:22px}
+  header h1{
+    font-size:clamp(20px,3.6vw,32px);font-weight:800;letter-spacing:.5px;
+    background:linear-gradient(90deg,#7dd3fc,#a78bfa,#f472b6);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  header p{color:var(--mut);font-size:13px;margin-top:8px}
+
+  .tabs{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:20px}
+  .tab{
+    background:var(--panel);border:1px solid var(--bd);color:var(--mut);
+    padding:10px 20px;border-radius:12px;cursor:pointer;font-size:14px;
+    font-weight:600;transition:.22s;font-family:inherit;
+  }
+  .tab:hover{color:var(--tx);border-color:#3b4d70}
+  .tab.active{
+    background:linear-gradient(135deg,#1c3a5e,#243b63);color:#7dd3fc;
+    border-color:#3b82f6;box-shadow:0 0 22px -6px #3b82f6aa;
+  }
+
+  .view{display:none;animation:fade .35s ease}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .lab{display:grid;grid-template-columns:1fr 310px;gap:16px}
+  @media(max-width:820px){.lab{grid-template-columns:1fr}}
+
+  .stage{
+    position:relative;border-radius:16px;overflow:hidden;
+    border:1px solid var(--bd);background:#0b1220;
+    box-shadow:0 18px 50px -20px #000;
+  }
+  .stage canvas{display:block;width:100%;height:clamp(320px,48vh,470px)}
+
+  /* HUD */
+  .hud{
+    position:absolute;left:14px;top:14px;background:rgba(8,14,26,.85);
+    backdrop-filter:blur(8px);border:1px solid var(--bd);border-radius:12px;
+    padding:11px 14px;min-width:200px;font-size:12px;
+  }
+  .hud .fs{font-weight:700;font-size:14px;letter-spacing:.3px}
+  .hud .bar{height:7px;border-radius:99px;background:#1e2a42;margin:8px 0 6px;overflow:hidden}
+  .hud .bar-fill{height:100%;width:50%;border-radius:99px;transition:width .18s,background .18s;background:var(--ok)}
+  .hud .verdict{font-weight:700;font-size:12px;color:var(--ok)}
+  .hud .cmp{margin-top:9px;border-top:1px dashed #2c3b58;padding-top:8px;
+    display:flex;flex-direction:column;gap:5px}
+  .hud .row{display:flex;align-items:center;gap:6px;color:var(--mut);font-size:11px}
+  .hud .row b{color:#c9d7ee;font-weight:600;margin-left:auto;font-variant-numeric:tabular-nums}
+  .mini{height:5px;border-radius:99px;background:#1e2a42;flex:1;overflow:hidden}
+  .mini i{display:block;height:100%;border-radius:99px;transition:width .18s}
+
+  /* 三条件指示灯 */
+  .conds{display:flex;gap:6px;margin-top:10px;border-top:1px dashed #2c3b58;padding-top:9px}
+  .cond{
+    flex:1;text-align:center;font-size:10.5px;font-weight:700;padding:4px 2px;
+    border-radius:7px;background:#1a2438;color:#5d6f8c;border:1px solid #24314a;
+    transition:.25s;
+  }
+  .cond.on{background:linear-gradient(135deg,#14321f,#1c4a2c);color:#86efac;
+    border-color:#22c55e;box-shadow:0 0 12px -3px #22c55e}
+  .cond.mid{background:#3a2c10;color:#fcd34d;border-color:#a16207}
+
+  .panel{
+    background:linear-gradient(180deg,var(--panel),#0e1728);
+    border:1px solid var(--bd);border-radius:16px;padding:16px;
+    display:flex;flex-direction:column;gap:14px;
+    box-shadow:0 18px 50px -24px #000;
+  }
+  .panel h3{font-size:13px;color:#9db4d6;font-weight:700;letter-spacing:.6px;
+    display:flex;align-items:center;gap:6px}
+  .panel h3::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#26344f,transparent)}
+
+  .ctl label{display:flex;justify-content:space-between;align-items:center;
+    font-size:12.5px;color:#b6c6dd;margin-bottom:7px;font-weight:500}
+  .ctl label b{color:#7dd3fc;font-variant-numeric:tabular-nums;font-weight:700}
+
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:99px;
+    background:#1e2a42;outline:none;cursor:pointer;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;width:17px;height:17px;border-radius:50%;
+    background:linear-gradient(135deg,#7dd3fc,#3b82f6);border:2px solid #0b1220;
+    box-shadow:0 0 12px -2px #38bdf8;cursor:grab;transition:.15s;
+  }
+  input[type=range]::-webkit-slider-thumb:active{transform:scale(1.18);cursor:grabbing}
+  input[type=range]::-moz-range-thumb{
+    width:15px;height:15px;border-radius:50%;border:2px solid #0b1220;
+    background:#38bdf8;box-shadow:0 0 12px -2px #38bdf8;cursor:grab;
+  }
+
+  .btn{
+    border:1px solid var(--bd);background:#162034;color:#c6d5ea;
+    padding:10px 12px;border-radius:10px;font-size:12.5px;font-weight:600;
+    cursor:pointer;font-family:inherit;transition:.18s;width:100%;
+  }
+  .btn:hover{border-color:#3b82f6;color:#7dd3fc}
+  .btn.on{background:linear-gradient(135deg,#7f1d1d,#b91c1c);border-color:#ef4444;
+    color:#fff;box-shadow:0 0 20px -6px #ef4444}
+  .btn.ghost{background:transparent}
+
+  .note{
+    margin-top:16px;background:linear-gradient(180deg,var(--panel),#0e1728);
+    border:1px solid var(--bd);border-radius:16px;padding:18px 20px;
+    font-size:13.5px;line-height:1.85;color:#b9c8de;
+  }
+  .note h4{color:#7dd3fc;font-size:14px;margin-bottom:8px;display:flex;gap:7px;align-items:center}
+  .note p+p{margin-top:9px}
+  .note em{color:#fbbf24;font-style:normal;font-weight:600}
+  .note strong{color:#f87171;font-weight:700}
+  .kw{color:#a78bfa;font-weight:600}
+
+  /* ====== 防治练习 ====== */
+  .fix-wrap{
+    display:grid;grid-template-columns:1fr 330px;gap:16px;
+  }
+  @media(max-width:880px){.fix-wrap{grid-template-columns:1fr}}
+
+  .fix-stage{
+    position:relative;border-radius:16px;overflow:hidden;
+    border:1px solid var(--bd);background:#0b1220;
+    box-shadow:0 18px 50px -20px #000;
+    transition:.25s;
+  }
+  .fix-stage.hot{border-color:#38bdf8;box-shadow:0 0 34px -8px #38bdf8}
+  .fix-stage.err{border-color:#ef4444;box-shadow:0 0 34px -8px #ef4444;animation:shake .4s}
+  @keyframes shake{
+    0%,100%{transform:translateX(0)}
+    20%{transform:translateX(-7px)}
+    40%{transform:translateX(7px)}
+    60%{transform:translateX(-4px)}
+    80%{transform:translateX(4px)}
+  }
+  .fix-stage canvas{display:block;width:100%;height:clamp(300px,44vh,430px)}
+
+  .fix-hud{
+    position:absolute;right:14px;top:14px;
+    background:rgba(8,14,26,.85);backdrop-filter:blur(8px);
+    border:1px solid var(--bd);border-radius:12px;padding:10px 14px;text-align:center;
+  }
+  .fix-hud .n{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;
+    transition:.3s}
+  .fix-hud .l{font-size:10.5px;color:var(--mut);letter-spacing:.5px;margin-top:1px}
+
+  .fix-tip{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    background:rgba(8,14,26,.88);border:1px dashed #3b82f6;border-radius:12px;
+    padding:12px 20px;font-size:13px;color:#7dd3fc;font-weight:600;
+    pointer-events:none;text-align:center;line-height:1.6;
+    transition:.3s;backdrop-filter:blur(6px);
+  }
+  .fix-tip.hide{opacity:0;transform:translate(-50%,-50%) scale(.9)}
+
+  /* 浮动评分提示 */
+  .toast{
+    position:absolute;left:50%;top:24px;transform:translateX(-50%) translateY(-8px);
+    padding:9px 20px;border-radius:99px;font-size:13px;font-weight:800;
+    letter-spacing:.4px;pointer-events:none;opacity:0;
+    transition:.32s cubic-bezier(.2,.9,.3,1.3);white-space:nowrap;
+    box-shadow:0 10px 30px -10px #000;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.ok{background:linear-gradient(135deg,#166534,#22c55e);color:#fff;
+    border:1px solid #4ade80;box-shadow:0 10px 32px -8px #22c55e}
+  .toast.err{background:linear-gradient(135deg,#7f1d1d,#dc2626);color:#fff;
+    border:1px solid #f87171;box-shadow:0 10px 32px -8px #dc2626}
+  .toast.win{background:linear-gradient(135deg,#1e3a8a,#7c3aed);color:#fff;
+    border:1px solid #a78bfa;box-shadow:0 10px 36px -8px #8b5cf6}
+
+  .tray{
+    background:linear-gradient(180deg,var(--panel),#0e1728);
+    border:1px solid var(--bd);border-radius:16px;padding:16px;
+    display:flex;flex-direction:column;gap:10px;
+  }
+  .tray h3{font-size:13px;color:#9db4d6;font-weight:700;letter-spacing:.6px;
+    display:flex;align-items:center;gap:6px;margin-bottom:2px}
+  .tray h3::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,#26344f,transparent)}
+
+  .m-card{
+    display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:12px;
+    background:linear-gradient(135deg,#1a2740,#152034);
+    border:1px solid #2b3b58;cursor:grab;transition:.2s;user-select:none;
+    touch-action:none;position:relative;overflow:hidden;
+  }
+  .m-card:hover{border-color:#3b82f6;transform:translateX(3px);
+    box-shadow:0 8px 22px -12px #3b82f6}
+  .m-card:active{cursor:grabbing}
+  .m-card.used{opacity:.32;cursor:default;filter:grayscale(.7)}
+  .m-card.used::after{
+    content:"✓ 已部署";position:absolute;right:10px;top:50%;transform:translateY(-50%);
+    font-size:10.5px;color:#4ade80;font-weight:800;letter-spacing:.5px;
+  }
+  .m-card .ic{font-size:20px;flex-shrink:0}
+  .m-card .tx{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .m-card .tx b{font-size:13px;color:#dbe7f8;font-weight:700}
+  .m-card .tx span{font-size:10.5px;color:#7d8fa9;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+
+  .ghost-card{
+    position:fixed;pointer-events:none;z-index:9999;
+    background:linear-gradient(135deg,#1e3a5f,#2563eb);
+    border:1px solid #60a5fa;border-radius:12px;padding:11px 14px;
+    display:flex;align-items:center;gap:10px;
+    box-shadow:0 18px 40px -10px #3b82f6;
+    transform:scale(1.06) rotate(-2deg);opacity:.94;
+  }
+  .ghost-card .ic{font-size:20px}
+  .ghost-card .tx b{font-size:13px;color:#fff;font-weight:700}
+
+  .progress{
+    display:flex;gap:4px;margin-top:4px;
+  }
+  .progress i{
+    flex:1;height:5px;border-radius:99px;background:#1e2a42;transition:.35s;
+  }
+  .progress i.done{background:linear-gradient(90deg,#38bdf8,#4ade80);
+    box-shadow:0 0 10px -2px #38bdf8}
+
+  /* 音效开关 */
+  .sound-row{
+    display:flex;align-items:center;justify-content:space-between;
+    font-size:11.5px;color:#8fa3bf;border-top:1px dashed #24314a;padding-top:10px;
+    margin-top:2px;
+  }
+  .snd-btn{
+    display:flex;align-items:center;gap:6px;background:#162034;border:1px solid var(--bd);
+    color:#c6d5ea;padding:6px 12px;border-radius:9px;cursor:pointer;font-size:11.5px;
+    font-weight:700;font-family:inherit;transition:.18s;
+  }
+  .snd-btn:hover{border-color:#3b82f6;color:#7dd3fc}
+  .snd-btn.off{color:#6b7f9c;border-color:#24314a}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+  .card{
+    background:linear-gradient(180deg,var(--panel2),#0f1a2c);
+    border:1px solid var(--bd);border-radius:14px;padding:16px;
+    transition:.25s;position:relative;overflow:hidden;
+  }
+  .card::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;
+    background:linear-gradient(180deg,#38bdf8,#a78bfa);opacity:.85}
+  .card:hover{transform:translateY(-4px);border-color:#3b82f6;box-shadow:0 18px 34px -18px #3b82f6}
+  .card .ic{font-size:22px;margin-bottom:8px;display:block}
+  .card h5{font-size:14px;margin-bottom:6px;color:#dbe7f8}
+  .card p{font-size:12.5px;line-height:1.7;color:#93a5c0}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+  th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #1e2a42}
+  th{color:#7dd3fc;font-weight:700;font-size:12.5px}
+  td{color:#b9c8de}
+  tr:hover td{background:#121c2e}
+  .tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;
+    font-weight:700;margin-right:4px}
+  .tag.r{background:#3f1d1d;color:#fca5a5}
+  .tag.g{background:#14321f;color:#86efac}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>🌍 滑坡 & 泥石流 原理实验室</h1>
+    <p>拖动滑块 · 调整降雨 · 亲眼见证地质灾害如何发生</p>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="slide">⛰️ 滑坡原理</button>
+    <button class="tab" data-tab="flow">🌊 泥石流原理</button>
+    <button class="tab" data-tab="fix">🛡️ 防治演练</button>
+  </nav>
+
+  <!-- ================= 滑坡 ================= -->
+  <section class="view active" id="view-slide">
+    <div class="lab">
+      <div class="stage">
+        <canvas id="cvSlide"></canvas>
+        <div class="hud">
+          <div class="fs" id="fsText">安全系数 Fs = —</div>
+          <div class="bar"><div class="bar-fill" id="fsBar"></div></div>
+          <div class="verdict" id="verdict">— 稳定 —</div>
+          <div class="cmp">
+            <div class="row"><span style="color:#f87171">下滑力</span>
+              <div class="mini"><i id="barDrive" style="background:linear-gradient(90deg,#f87171,#fb923c);width:40%"></i></div>
+              <b id="txtDrive">0</b></div>
+            <div class="row"><span style="color:#4ade80">抗滑力</span>
+              <div class="mini"><i id="barResist" style="background:linear-gradient(90deg,#4ade80,#22d3ee);width:60%"></i></div>
+              <b id="txtResist">0</b></div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="panel">
+        <h3>🌧️ 影响因素</h3>
+
+        <div class="ctl">
+          <label>坡度角 <b id="vTheta">38°</b></label>
+          <input type="range" id="rTheta" min="30" max="50" value="38" step="1">
+        </div>
+
+        <div class="ctl">
+          <label>降雨强度 <b id="vRain">0%</b></label>
+          <input type="range" id="rRain" min="0" max="100" value="0" step="1">
+        </div>
+
+        <div class="ctl">
+          <label>植被覆盖 <b id="vVeg">60%</b></label>
+          <input type="range" id="rVeg" min="0" max="100" value="60" step="1">
+        </div>
+
+        <div class="ctl">
+          <label>坡脚开挖 <b id="vDig">0%</b></label>
+          <input type="range" id="rDig" min="0" max="100" value="0" step="1">
+        </div>
+
+        <button class="btn" id="btnBlast">💥 爆破振动（点击触发）</button>
+        <button class="btn ghost" id="btnReset">↺ 恢复初始状态</button>
+      </aside>
+    </div>
+
+    <div class="note">
+      <h4>📖 滑坡是怎么发生的？</h4>
+      <p>滑坡是指斜坡上的土体、岩体或人工堆砌物，在<em>重力主导</em>作用下，沿着岩层节理、软弱土层等<strong>固定滑动面</strong>，整体下滑或分散滑移的地质现象。</p>
+      <p>核心可以理解为一个"拔河比赛"：<span class="kw">下滑力</span>（重力沿滑动面的分量）对抗<span class="kw">抗滑力</span>（摩擦阻力 + 土体黏聚力）。当抗滑力被削弱到小于下滑力时，坡体就会失稳滑动。</p>
+      <p>▪ <em>降雨</em>：雨水下渗，增加岩土体重量，同时抬高<strong>孔隙水压力</strong>，抵消掉一部分法向压力，使摩擦力大幅下降 —— 这是最关键的触发因素。<br>
+         ▪ <em>坡度变陡</em>：下滑力随坡度增大而增大。<br>
+         ▪ <em>植被破坏</em>：根系原本像"钢筋"一样锚固土体，砍伐后黏聚力骤降。<br>
+         ▪ <em>坡脚开挖</em>：挖掉了支撑坡体的"墙脚"，抗滑力直接损失。<br>
+         ▪ <em>爆破振动</em>：瞬间附加惯性力，相当于给下滑力"加了一把火"。</p>
+    </div>
+  </section>
+
+  <!-- ================= 泥石流 ================= -->
+  <section class="view" id="view-flow">
+    <div class="lab">
+      <div class="stage">
+        <canvas id="cvFlow"></canvas>
+        <div class="hud">
+          <div class="fs" id="flowStatus">💤 沟谷平静</div>
+          <div class="bar"><div class="bar-fill" id="flowBar" style="width:0%;background:linear-gradient(90deg,#fbbf24,#f87171)"></div></div>
+          <div class="verdict" id="flowVerdict" style="color:#8798b3">降雨不足，暂未启动</div>
+          <div class="cmp">
+            <div class="row"><span>泥石流前锋位置</span><b id="txtFront">0%</b></div>
+            <div class="row"><span>累计冲出物质</span><b id="txtDeposit">0</b></div>
+          </div>
+          <div class="conds">
+            <span class="cond" id="condTerrain">① 地形</span>
+            <span class="cond" id="condMaterial">② 物质</span>
+            <span class="cond" id="condWater">③ 水源</span>
+          </div>
+        </div>
+      </div>
+
+      <aside class="panel">
+        <h3>🌧️ 激发条件</h3>
+
+        <div class="ctl">
+          <label>降雨强度 <b id="vFRain">20%</b></label>
+          <input type="range" id="rFRain" min="0" max="100" value="20" step="1">
+        </div>
+
+        <div class="ctl">
+          <label>松散固体物质 <b id="vLoose">70%</b></label>
+          <input type="range" id="rLoose" min="0" max="100" value="70" step="1">
+        </div>
+
+        <div class="ctl">
+          <label>沟谷坡度 <b id="vSlope">45°</b></label>
+          <input type="range" id="rSlope" min="25" max="65" value="45" step="1">
+        </div>
+
+        <button class="btn ghost" id="btnFlowReset">↺ 清空沟谷 / 重新堆积</button>
+
+        <div style="font-size:11.5px;color:#6b7f9c;line-height:1.75;border-top:1px dashed #24314a;padding-top:11px">
+          💡 把<span style="color:#7dd3fc">降雨强度</span>拉到 40% 以上，
+          并保持足够的<span style="color:#a78bfa">松散物质</span>，
+          再适当增加<span style="color:#fbbf24">沟谷坡度</span>，泥石流就会启动。
+        </div>
+      </aside>
+    </div>
+
+    <div class="note">
+      <h4>📖 泥石流是怎么形成的？</h4>
+      <p>泥石流是暴雨、洪水或其他水源将含有沙石且松软的土质山体<em>饱和稀释</em>后形成的洪流。它比普通洪水密度大得多，能搬运巨石、冲毁房屋。</p>
+      <p>形成必须同时满足三个条件，缺一不可：</p>
+      <p>① <span class="kw">地形条件</span> —— 需要山区沟谷或陡峭坡面，坡度足够大才能提供让泥沙奔涌而下的能量；<br>
+         ② <span class="kw">物质条件</span> —— 沟谷中要堆积大量<strong>松散固体物质</strong>，如风化岩石碎屑、滑坡崩塌堆积体、废弃矿渣等；<br>
+         ③ <span class="kw">水源条件</span> —— 强降雨（或冰雪融水、水库溃决）是主要触发因素。大量降水迅速汇集成流，增加土体含水量与孔隙水压力，降低抗剪强度，使土体液化流动。</p>
+      <p>三者齐备时，松散物质被水"泡软"并裹挟，形成高浓度的<span class="kw">水—土—石混合体</span>，沿沟谷呼啸而下，在出山口堆积成扇形。</p>
+    </div>
+  </section>
+
+  <!-- ================= 防治演练 ================= -->
+  <section class="view" id="view-fix">
+    <div class="fix-wrap">
+      <div class="fix-stage" id="fixStage">
+        <canvas id="cvFix"></canvas>
+        <div class="fix-hud">
+          <div class="n" id="fixFs">0.85</div>
+          <div class="l">综合安全系数</div>
+        </div>
+        <div class="fix-tip" id="fixTip">
+          👉 把右侧的防治措施<br>拖到坡体上部署
+        </div>
+        <div class="toast" id="fixToast"></div>
+      </div>
+
+      <aside class="tray">
+        <h3>🛠️ 防治措施（拖拽部署）</h3>
+
+        <div class="m-card" data-m="drain">
+          <span class="ic">🕳️</span>
+          <div class="tx"><b>排水工程</b><span>截水沟 · 盲沟 · 疏干地下水</span></div>
+        </div>
+        <div class="m-card" data-m="wall">
+          <span class="ic">🧱</span>
+          <div class="tx"><b>支挡工程</b><span>抗滑桩 · 挡土墙 · 锚索</span></div>
+        </div>
+        <div class="m-card" data-m="cut">
+          <span class="ic">⛏️</span>
+          <div class="tx"><b>削坡减载</b><span>削缓坡度 · 压脚回填</span></div>
+        </div>
+        <div class="m-card" data-m="tree">
+          <span class="ic">🌳</span>
+          <div class="tx"><b>坡面防护</b><span>植树造林 · 植草护坡</span></div>
+        </div>
+        <div class="m-card" data-m="monitor">
+          <span class="ic">📡</span>
+          <div class="tx"><b>监测预警</b><span>位移计 · 雨量站 · 预警广播</span></div>
+        </div>
+        <div class="m-card" data-m="move">
+          <span class="ic">🏠</span>
+          <div class="tx"><b>避让搬迁</b><span>远离危险区 · 源头避险</span></div>
+        </div>
+
+        <div class="progress">
+          <i data-p="drain"></i><i data-p="wall"></i><i data-p="cut"></i>
+          <i data-p="tree"></i><i data-p="monitor"></i><i data-p="move"></i>
+        </div>
+
+        <div class="sound-row">
+          <span>🔊 答题音效</span>
+          <button class="snd-btn" id="btnSound">🔊 已开启</button>
+        </div>
+
+        <button class="btn ghost" id="btnFixReset">↺ 重置演练</button>
+      </aside>
+    </div>
+
+    <div class="note" style="margin-top:16px">
+      <h4>🎯 演练目标</h4>
+      <p>把 <em>6 项防治措施</em> 全部拖到坡体上部署，观察综合安全系数从 <strong>0.85（危险）</strong> 逐步提升到 <strong>安全区间</strong>，坡体上的工程设施也会同步出现。</p>
+      <p>💡 提示：拖到坡体外会提示错误；部署正确时会响起清脆的提示音，全部完成后还有胜利音效。也可以点击右侧的 <span class="kw">答题音效</span> 按钮静音。</p>
+    </div>
+
+    <div class="cards" style="margin-top:16px">
+      <div class="card"><span class="ic">🕳️</span><h5>排水工程</h5>
+        <p>修建截水沟、排水沟、盲沟，拦截地表水并疏干坡体内部地下水，降低孔隙水压力——这是最根本有效的措施。</p></div>
+      <div class="card"><span class="ic">🧱</span><h5>支挡工程</h5>
+        <p>挡土墙、抗滑桩、锚索锚杆、格构梁，直接为坡体提供额外的抗滑力，像给斜坡"撑上一根拐杖"。</p></div>
+      <div class="card"><span class="ic">⛏️</span><h5>削坡减载</h5>
+        <p>削缓上部坡体、压脚回填坡脚，减小下滑力同时增加支撑——但要避免在坡脚随意开挖。</p></div>
+      <div class="card"><span class="ic">🌳</span><h5>坡面防护</h5>
+        <p>植树造林、植草护坡。根系像天然钢筋网锚固土层，同时减少地表径流冲刷，恢复黏聚力。</p></div>
+      <div class="card"><span class="ic">📡</span><h5>监测预警</h5>
+        <p>布设位移计、裂缝计、雨量站，结合卫星 InSAR 变形监测，在滑动前发出预警，争取撤离时间。</p></div>
+      <div class="card"><span class="ic">🏘️</span><h5>避让搬迁</h5>
+        <p>对危险性极高、治理成本过大的隐患点，最经济安全的办法是搬迁避让，不在危险区建房、修路。</p></div>
+    </div>
+
+    <div class="note">
+      <h4>📊 滑坡 vs 泥石流 对比</h4>
+      <table>
+        <tr><th style="width:100px">对比项</th><th>滑坡</th><th>泥石流</th></tr>
+        <tr><td>运动方式</td><td>沿固定滑动面<b>整体下滑</b></td><td>沿沟谷<b>流体状奔涌</b></td></tr>
+        <tr><td>物质状态</td><td>相对干燥的土体/岩体</td><td>水—土—石高浓度混合体</td></tr>
+        <tr><td>含水量</td><td>较低，滑动面处含水</td><td>极高，接近饱和甚至液化</td></tr>
+        <tr><td>地形要求</td><td>斜坡即可（<span class="tag g">坡</span>）</td><td>必须有沟谷或坡面（<span class="tag r">沟</span>）</td></tr>
+        <tr><td>主要触发</td><td>降雨、地震、开挖、爆破</td><td>暴雨、冰雪融水、溃决</td></tr>
+        <tr><td>典型速度</td><td>慢者数厘米/年，快者数十米/秒</td><td>常达数米～十几米/秒</td></tr>
+        <tr><td>堆积形态</td><td>滑坡舌、鼓丘、阶坎</td><td>出山口扇形堆积体</td></tr>
+        <tr><td>两者关系</td><td colspan="2">滑坡、崩塌常为泥石流提供松散固体物质；泥石流又可掏蚀坡脚诱发新的滑坡，二者互为因果</td></tr>
+      </table>
+    </div>
+
+    <div class="note" style="margin-top:16px">
+      <h4>🎯 核心结论</h4>
+      <p>滑坡和泥石流的形成，是<em>自然因素</em>（地质构造、岩性、地形地貌、降雨）与<em>人为因素</em>（开挖坡脚、加载、爆破振动、乱砍滥伐、过度开垦）<strong>相互作用</strong>的结果。人类活动往往直接破坏斜坡的稳定状态，或加剧灾害的规模与频率。</p>
+      <p>理解"<span class="kw">下滑力 vs 抗滑力</span>"这一根本矛盾，以及"<span class="kw">地形 + 物质 + 水源</span>"三大条件，就能把握住防灾减灾的关键：<em>减少水的影响、增加抗滑能力、保护坡体结构、加强监测预警</em>。</p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ============================================================
+   通用工具
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const dims = new Map();
+
+function resizeCanvas(cv){
+  const dpr = window.devicePixelRatio || 1;
+  const r = cv.getBoundingClientRect();
+  if(r.width < 10 || r.height < 10) return;
+  const W = Math.round(r.width), H = Math.round(r.height);
+  cv.width  = Math.round(W * dpr);
+  cv.height = Math.round(H * dpr);
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  dims.set(cv, { ctx, W, H });
+}
+
+/* ============================================================
+   🔊 音效引擎（Web Audio API）
+   ============================================================ */
+let actx = null;
+let soundOn = true;
+
+function ensureAudio(){
+  if(!actx){
+    try{
+      actx = new (window.AudioContext || window.webkitAudioContext)();
+    }catch(e){ actx = null; }
+  }
+  if(actx && actx.state === 'suspended') actx.resume();
+  return actx;
+}
+
+/* 单音 */
+function tone(freq, delay, dur, type='sine', vol=0.22){
+  if(!soundOn) return;
+  const ctx = ensureAudio();
+  if(!ctx) return;
+  const t0 = ctx.currentTime + delay;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  gain.gain.setValueAtTime(0.0001, t0);
+  gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.05);
+}
+
+/* 滑音（用于错误提示的下坠感） */
+function glide(f1, f2, delay, dur, type='triangle', vol=0.18){
+  if(!soundOn) return;
+  const ctx = ensureAudio();
+  if(!ctx) return;
+  const t0 = ctx.currentTime + delay;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(f1, t0);
+  osc.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
+  gain.gain.setValueAtTime(0.0001, t0);
+  gain.gain.exponentialRampToValueAtTime(vol, t0 + 0.015);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + dur + 0.05);
+}
+
+/* ✅ 正确：上行三音 C-E-G */
+function sfxSuccess(){
+  ensureAudio();
+  tone(523.25, 0,    0.13, 'sine', 0.20);  // C5
+  tone(659.25, 0.065,0.13, 'sine', 0.20);  // E5
+  tone(783.99, 0.130,0.26, 'sine', 0.22);  // G5
+  tone(1567.98,0.130,0.16,'sine', 0.07);   // 泛音
+}
+
+/* ❌ 错误：下坠双音 */
+function sfxError(){
+  ensureAudio();
+  glide(300, 180, 0,    0.16, 'triangle', 0.17);
+  tone(155, 0.11, 0.22, 'triangle', 0.14);
+}
+
+/* 🏆 全部完成：胜利琶音 */
+function sfxVictory(){
+  ensureAudio();
+  const notes = [523.25, 659.25, 783.99, 1046.50]; // C E G C
+  notes.forEach((f,i)=> tone(f, i*0.105, 0.30, 'sine', 0.19));
+  // 结尾和弦
+  tone(1046.50, 0.46, 0.75, 'sine', 0.16);
+  tone(1318.51, 0.46, 0.75, 'sine', 0.13);
+  tone(1567.98, 0.46, 0.75, 'sine', 0.10);
+  // 闪亮泛音
+  tone(2093.00, 0.60, 0.55, 'sine', 0.06);
+}
+
+/* 轻微"咔哒"——开始拖拽 */
+function sfxPick(){
+  ensureAudio();
+  tone(880, 0, 0.05, 'square', 0.05);
+}
+
+/* 音效开关按钮 */
+$('#btnSound').addEventListener('click', e => {
+  soundOn = !soundOn;
+  e.target.textContent = soundOn ? '🔊 已开启' : '🔇 已静音';
+  e.target.classList.toggle('off', !soundOn);
+  if(soundOn){
+    ensureAudio();
+    tone(880, 0, 0.08, 'sine', 0.15);
+    tone(1174.66, 0.06, 0.12, 'sine', 0.15);
+  }
+});
+
+/* ============================================================
+   标签页切换
+   ============================================================ */
+$$('.tab').forEach(t => t.addEventListener('click', () => {
+  $$('.tab').forEach(x => x.classList.remove('active'));
+  $$('.view').forEach(x => x.classList.remove('active'));
+  t.classList.add('active');
+  $('#view-' + t.dataset.tab).classList.add('active');
+  requestAnimationFrame(() => { resizeAll(); });
+}));
+
+/* ============================================================
+   一、滑坡模块
+   ============================================================ */
+const cvSlide = $('#cvSlide');
+const S = { theta:38, rain:0, veg:60, dig:0, blast:false, offset:0, F:2, drive:0, resist:0, drops:[] };
+
+function initRain(){
+  const d = dims.get(cvSlide);
+  if(!d) return;
+  S.drops = Array.from({length:240}, () => ({
+    x: Math.random()*d.W, y: Math.random()*d.H,
+    v: 380 + Math.random()*420, len: 9 + Math.random()*12
+  }));
+}
+
+function slideGeom(W, H){
+  const thDeg = S.theta;
+  const th = thDeg * Math.PI / 180;
+  const groundY = H - Math.max(50, H*0.16);
+  const hSlope  = Math.min(H*0.38, W*0.26);
+  const topY    = groundY - hSlope;
+  const footX   = W - Math.max(55, W*0.10);
+  const slopeLen = hSlope / Math.sin(th);
+  const topX    = footX - slopeLen * Math.cos(th);
+
+  const betaDeg = thDeg * 0.55 + 6;
+  const beta = betaDeg * Math.PI / 180;
+  const slipLen = hSlope / Math.sin(beta);
+  const cX = footX - slipLen * Math.cos(beta);
+  const cY = topY;
+
+  return { groundY, hSlope, topY, footX, topX, beta, slipLen, cX, cY, th };
+}
+
+function computeForces(W, H){
+  const g = slideGeom(W, H);
+  const A = {x:g.footX, y:g.groundY};
+  const B = {x:g.topX,  y:g.topY};
+  const C = {x:g.cX,    y:g.cY};
+  const area = 0.5*Math.abs(A.x*(B.y-C.y) + B.x*(C.y-A.y) + C.x*(A.y-B.y));
+  const Wt = area * 0.02;
+
+  const c = 0.02 + S.veg/100 * 0.10;
+  const cohesion = c * g.slipLen;
+  const U = Wt * Math.cos(g.beta) * (S.rain/100) * 0.8;
+  const normal = Math.max(0, Wt*Math.cos(g.beta) - U);
+  const friction = normal * 0.8;
+  const support = 1 - S.dig/100 * 0.6;
+  const resist = (cohesion + friction) * support;
+
+  let drive = Wt * Math.sin(g.beta);
+  if(S.blast) drive += 25;
+  return { resist, drive, F: resist / Math.max(1, drive) };
+}
+
+function updateSlide(dt){
+  const d = dims.get(cvSlide);
+  if(!d) return;
+  const f = computeForces(d.W, d.H);
+  S.F = f.F; S.drive = f.drive; S.resist = f.resist;
+
+  if(f.F < 1) S.offset = Math.min(S.offset + (1-f.F)*130*dt, 120);
+  else { S.offset *= Math.pow(0.02, dt); if(S.offset < 0.4) S.offset = 0; }
+
+  const n = Math.round(S.rain/100 * S.drops.length);
+  for(let i=0;i<n;i++){
+    const p = S.drops[i];
+    p.y += p.v*dt; p.x += 45*dt;
+    if(p.y > d.H+20){ p.y = -20; p.x = Math.random()*d.W; }
+  }
+
+  const pct = Math.max(0, Math.min(1, f.F/2.5))*100;
+  const bar = $('#fsBar');
+  bar.style.width = pct + '%';
+  let color = '#4ade80', txt = '✔ 稳定', tc = '#4ade80';
+  if(f.F < 1){ color='#f87171'; txt='⚠ 失稳！坡体正在下滑'; tc='#f87171'; }
+  else if(f.F < 1.3){ color='#fbbf24'; txt='⚠ 临界状态 · 随时可能滑动'; tc='#fbbf24'; }
+  bar.style.background = color;
+  $('#fsText').textContent = '安全系数 Fs = ' + f.F.toFixed(2);
+  $('#fsText').style.color = tc;
+  $('#verdict').textContent = txt;
+  $('#verdict').style.color = tc;
+
+  const mx = Math.max(f.drive, f.resist, 1);
+  $('#barDrive').style.width  = (f.drive/mx*100)+'%';
+  $('#barResist').style.width = (f.resist/mx*100)+'%';
+  $('#txtDrive').textContent  = f.drive.toFixed(0);
+  $('#txtResist').textContent = f.resist.toFixed(0);
+}
+
+function drawTree(ctx, x, y, h){
+  ctx.save();
+  ctx.fillStyle = '#3f6212';
+  ctx.fillRect(x-1.2, y-h*0.35, 2.4, h*0.35);
+  ctx.beginPath();
+  ctx.moveTo(x, y-h);
+  ctx.lineTo(x-h*0.42, y-h*0.3);
+  ctx.lineTo(x+h*0.42, y-h*0.3);
+  ctx.closePath();
+  ctx.fillStyle = '#4d7c0f';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x, y-h*1.15);
+  ctx.lineTo(x-h*0.3, y-h*0.62);
+  ctx.lineTo(x+h*0.3, y-h*0.62);
+  ctx.closePath();
+  ctx.fillStyle = '#65a30d';
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawSlide(){
+  const d = dims.get(cvSlide);
+  if(!d || cvSlide.offsetParent === null) return;
+  const { ctx, W, H } = d;
+  const g = slideGeom(W, H);
+  ctx.clearRect(0,0,W,H);
+
+  const sky = ctx.createLinearGradient(0,0,0,g.groundY);
+  sky.addColorStop(0,'#0a1424'); sky.addColorStop(1,'#1e3252');
+  ctx.fillStyle = sky; ctx.fillRect(0,0,W,H);
+
+  ctx.beginPath();
+  ctx.moveTo(0, g.topY+30);
+  ctx.lineTo(W*.16, g.topY-45);
+  ctx.lineTo(W*.32, g.topY+8);
+  ctx.lineTo(W*.52, g.topY-60);
+  ctx.lineTo(W*.72, g.topY+4);
+  ctx.lineTo(W, g.topY-35);
+  ctx.lineTo(W, g.groundY); ctx.lineTo(0, g.groundY);
+  ctx.closePath();
+  ctx.fillStyle = '#13203a'; ctx.fill();
+
+  const soil = ctx.createLinearGradient(0, g.topY, 0, H);
+  soil.addColorStop(0,'#7d6850'); soil.addColorStop(.35,'#5b4a37'); soil.addColorStop(1,'#382c20');
+  ctx.beginPath();
+  ctx.moveTo(0, g.topY);
+  ctx.lineTo(g.topX, g.topY);
+  ctx.lineTo(g.footX, g.groundY);
+  ctx.lineTo(W, g.groundY);
+  ctx.lineTo(W, H); ctx.lineTo(0, H);
+  ctx.closePath();
+  ctx.fillStyle = soil; ctx.fill();
+
+  ctx.save(); ctx.clip();
+  ctx.strokeStyle = 'rgba(255,255,255,0.045)'; ctx.lineWidth = 1;
+  for(let y = g.topY+16; y < H; y += 24){
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+  }
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.moveTo(0, g.topY);
+  ctx.lineTo(g.topX, g.topY);
+  ctx.lineTo(g.footX, g.groundY);
+  ctx.strokeStyle = 'rgba(190,220,255,.55)';
+  ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+
+  /* 滑体 */
+  const off = S.offset;
+  const dx = Math.cos(g.beta)*off, dy = Math.sin(g.beta)*off;
+  ctx.save();
+  ctx.translate(dx, dy);
+  ctx.beginPath();
+  ctx.moveTo(g.footX, g.groundY);
+  ctx.lineTo(g.topX, g.topY);
+  ctx.lineTo(g.cX, g.cY);
+  ctx.closePath();
+  const sg = ctx.createLinearGradient(g.cX, g.topY, g.footX, g.groundY);
+  sg.addColorStop(0,'rgba(196,152,100,.55)');
+  sg.addColorStop(1,'rgba(150,110,70,.42)');
+  ctx.fillStyle = sg; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,190,120,.85)'; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.restore();
+
+  /* 滑动面 */
+  ctx.save();
+  ctx.setLineDash([9,7]);
+  ctx.beginPath();
+  ctx.moveTo(g.footX, g.groundY);
+  ctx.lineTo(g.cX, g.cY);
+  ctx.strokeStyle = 'rgba(248,113,113,.92)';
+  ctx.lineWidth = 2.6;
+  ctx.shadowColor = '#f87171'; ctx.shadowBlur = 10;
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  ctx.font = '600 11px system-ui,sans-serif';
+  ctx.fillStyle = '#fca5a5';
+  const lx = (g.footX+g.cX)/2, ly = (g.groundY+g.cY)/2;
+  ctx.fillText('滑动面', lx+8, ly+4);
+  ctx.restore();
+
+  if(S.dig > 1){
+    const r = 14 + S.dig*0.55;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(g.footX, g.groundY, r, Math.PI, Math.PI*1.5);
+    ctx.lineTo(g.footX, g.groundY);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(6,11,22,.92)'; ctx.fill();
+    ctx.setLineDash([4,4]);
+    ctx.strokeStyle = 'rgba(251,191,36,.8)'; ctx.lineWidth = 1.6; ctx.stroke();
+    ctx.restore();
+  }
+
+  if(S.veg > 2){
+    const n = Math.max(1, Math.round(S.veg/100*15));
+    for(let i=0;i<n;i++){
+      const t = (i+0.5)/n;
+      const x = g.footX + (g.topX-g.footX)*t;
+      const y = g.groundY + (g.topY-g.groundY)*t;
+      drawTree(ctx, x, y, 11 + Math.sin(i*2.1)*3.5);
+    }
+    const n2 = Math.round(S.veg/100*5);
+    for(let i=0;i<n2;i++){
+      const x = g.topX - (i+0.5)*26;
+      if(x > 6) drawTree(ctx, x, g.topY, 12);
+    }
+  }
+
+  if(S.rain > 1){
+    const n = Math.round(S.rain/100*S.drops.length);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(147,197,253,.55)'; ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    for(let i=0;i<n;i++){
+      const p = S.drops[i];
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x - p.len*0.28, p.y + p.len);
+    }
+    ctx.stroke(); ctx.restore();
+  }
+
+  if(S.F < 1){
+    ctx.save();
+    const a = 0.32 + Math.sin(performance.now()/180)*0.22;
+    ctx.strokeStyle = `rgba(248,113,113,${a})`;
+    ctx.lineWidth = 5;
+    ctx.strokeRect(2.5,2.5,W-5,H-5);
+    ctx.restore();
+  }
+}
+
+/* 滑坡控件 */
+$('#rTheta').addEventListener('input', e => { S.theta = +e.target.value; $('#vTheta').textContent = S.theta+'°'; });
+$('#rRain').addEventListener('input',  e => { S.rain  = +e.target.value; $('#vRain').textContent  = S.rain+'%'; });
+$('#rVeg').addEventListener('input',   e => { S.veg   = +e.target.value; $('#vVeg').textContent   = S.veg+'%'; });
+$('#rDig').addEventListener('input',   e => { S.dig   = +e.target.value; $('#vDig').textContent   = S.dig+'%'; });
+$('#btnBlast').addEventListener('click', e => {
+  S.blast = !S.blast;
+  e.target.classList.toggle('on', S.blast);
+  e.target.textContent = S.blast ? '💥 振动中…（再次点击停止）' : '💥 爆破振动（点击触发）';
+});
+$('#btnReset').addEventListener('click', () => {
+  S.theta=38; S.rain=0; S.veg=60; S.dig=0; S.blast=false; S.offset=0;
+  $('#rTheta').value=38; $('#vTheta').textContent='38°';
+  $('#rRain').value=0;   $('#vRain').textContent='0%';
+  $('#rVeg').value=60;   $('#vVeg').textContent='60%';
+  $('#rDig').value=0;    $('#vDig').textContent='0%';
+  const b = $('#btnBlast');
+  b.classList.remove('on');
+  b.textContent = '💥 爆破振动（点击触发）';
+});
+
+/* ============================================================
+   二、泥石流模块
+   ============================================================ */
+const cvFlow = $('#cvFlow');
+const DF = {
+  rain: 20, looseAmt: 70, slope: 45,
+  front: 0, deposit: 0, loose: [], drops: [], pts: [], norms: [], splash: []
+};
+
+function gullyCenter(t, W, H){
+  const x = W * (0.08 + 0.84 * t);
+  const y = H * (0.15 + 0.60 * Math.pow(t, 0.82));
+  return { x, y };
+}
+function gullyHalf(t, W){
+  return W * (0.05 + 0.09 * t);
+}
+function gullyNormalAt(t, W, H){
+  const eps = 0.002;
+  const p  = gullyCenter(t, W, H);
+  const p2 = gullyCenter(Math.min(1, t+eps), W, H);
+  let dx = p2.x - p.x, dy = p2.y - p.y;
+  const len = Math.hypot(dx,dy) || 1;
+  return { nx: -dy/len, ny: dx/len };
+}
+function gullyPos(t, off, W, H){
+  const p = gullyCenter(t, W, H);
+  const n = gullyNormalAt(t, W, H);
+  const hw = gullyHalf(t, W);
+  return { x: p.x + n.nx*off*hw, y: p.y + n.ny*off*hw };
+}
+function skyLine(u, W, H){
+  return H * (0.08 + 0.55 * u);
+}
+
+function initDebris(){
+  const d = dims.get(cvFlow);
+  if(!d) return;
+  const { W, H } = d;
+
+  DF.pts = []; DF.norms = [];
+  const N = 90;
+  for(let i=0;i<=N;i++){
+    const t = i/N;
+    DF.pts.push(Object.assign({t}, gullyCenter(t, W, H)));
+    DF.norms.push(gullyNormalAt(t, W, H));
+  }
+
+  DF.loose = Array.from({length: 300}, () => ({
+    t: Math.pow(Math.random(), 0.85) * 0.78,
+    off: (Math.random()*2 - 1) * 0.86,
+    r: 1.0 + Math.random()*2.6,
+    rot: Math.random()*Math.PI*2,
+    shade: Math.random()
+  }));
+
+  DF.drops = Array.from({length: 180}, () => ({
+    x: Math.random()*W, y: Math.random()*H,
+    v: 400 + Math.random()*500, len: 9 + Math.random()*13
+  }));
+
+  DF.splash = [];
+}
+
+function bandPath(ctx, W, t0, t1){
+  if(t1 <= t0) return false;
+  const idx = [];
+  for(let i=0;i<DF.pts.length;i++){
+    const t = DF.pts[i].t;
+    if(t >= t0 && t <= t1) idx.push(i);
+  }
+  if(idx.length < 2) return false;
+
+  ctx.beginPath();
+  for(let k=0;k<idx.length;k++){
+    const i = idx[k];
+    const p = DF.pts[i], n = DF.norms[i];
+    const w = gullyHalf(p.t, W);
+    const x = p.x + n.nx*w, y = p.y + n.ny*w;
+    if(k===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  for(let k=idx.length-1;k>=0;k--){
+    const i = idx[k];
+    const p = DF.pts[i], n = DF.norms[i];
+    const w = gullyHalf(p.t, W);
+    ctx.lineTo(p.x - n.nx*w, p.y - n.ny*w);
+  }
+  ctx.closePath();
+  return true;
+}
+
+function updateFlow(dt){
+  const d = dims.get(cvFlow);
+  if(!d) return;
+  const { W, H } = d;
+
+  const waterOK   = DF.rain > 35;
+  const materialOK= DF.looseAmt > 12;
+  const terrainOK = DF.slope > 28;
+  const active    = waterOK && materialOK && terrainOK;
+
+  if(active){
+    const rate = ((DF.rain-35)/65) * (DF.looseAmt/100) * (0.5 + DF.slope/100) * 0.62;
+    DF.front = Math.min(1, DF.front + rate*dt);
+
+    if(DF.front > 0.02 && Math.random() < DF.rain/100 * 1.6){
+      const t0 = Math.max(0, DF.front - 0.06);
+      const p = gullyCenter(t0, W, H);
+      DF.splash.push({
+        x: p.x + (Math.random()-0.5)*W*0.05,
+        y: p.y + (Math.random()-0.5)*H*0.03,
+        vx: (Math.random()-0.2)*60,
+        vy: -30 - Math.random()*70,
+        life: 1, r: 1 + Math.random()*2
+      });
+    }
+  } else {
+    DF.front = Math.max(0, DF.front - 0.35*dt);
+  }
+
+  if(DF.front >= 0.985 && active){
+    DF.deposit = Math.min(520, DF.deposit + (DF.rain/100)*(DF.looseAmt/100)*70*dt);
+  }
+
+  for(let i=DF.splash.length-1;i>=0;i--){
+    const s = DF.splash[i];
+    s.x += s.vx*dt; s.y += s.vy*dt; s.vy += 260*dt;
+    s.life -= dt*1.9;
+    if(s.life <= 0) DF.splash.splice(i,1);
+  }
+
+  const n = Math.round(DF.rain/100 * DF.drops.length);
+  for(let i=0;i<n;i++){
+    const p = DF.drops[i];
+    p.y += p.v*dt;
+    if(p.y > H+20){ p.y = -20; p.x = Math.random()*W; }
+  }
+
+  /* HUD */
+  const pct = DF.front * 100;
+  $('#flowBar').style.width = pct + '%';
+  $('#txtFront').textContent = Math.round(pct) + '%';
+  $('#txtDeposit').textContent = Math.round(DF.deposit);
+
+  if(DF.front > 0.55){
+    $('#flowStatus').textContent = '🌊 泥石流正在奔涌！';
+    $('#flowStatus').style.color = '#f87171';
+    $('#flowVerdict').textContent = '危险！沿沟谷高速下泄';
+    $('#flowVerdict').style.color = '#f87171';
+  } else if(DF.front > 0.03){
+    $('#flowStatus').textContent = '💧 沟谷开始起动…';
+    $('#flowStatus').style.color = '#fbbf24';
+    $('#flowVerdict').textContent = '松散物质正被水流裹挟';
+    $('#flowVerdict').style.color = '#fbbf24';
+  } else {
+    $('#flowStatus').textContent = '💤 沟谷平静';
+    $('#flowStatus').style.color = '#e6ecf5';
+    $('#flowVerdict').textContent = !waterOK ? '降雨不足，暂未启动'
+      : (!materialOK ? '松散物质不足' : '坡度太缓，能量不足');
+    $('#flowVerdict').style.color = '#8798b3';
+  }
+
+  const c1 = $('#condTerrain'), c2 = $('#condMaterial'), c3 = $('#condWater');
+  c1.className = 'cond' + (DF.slope >= 40 ? ' on' : DF.slope >= 28 ? ' mid' : '');
+  c2.className = 'cond' + (DF.looseAmt >= 50 ? ' on' : DF.looseAmt >= 12 ? ' mid' : '');
+  c3.className = 'cond' + (DF.rain >= 55 ? ' on' : DF.rain >= 35 ? ' mid' : '');
+}
+
+function drawFlow(){
+  const d = dims.get(cvFlow);
+  if(!d || cvFlow.offsetParent === null) return;
+  const { ctx, W, H } = d;
+  ctx.clearRect(0,0,W,H);
+
+  const sky = ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#0a1626');
+  sky.addColorStop(0.5,'#13273d');
+  sky.addColorStop(1,'#1a2d42');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,W,H);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(0, H*0.42);
+  ctx.lineTo(W*0.14, H*0.24);
+  ctx.lineTo(W*0.28, H*0.38);
+  ctx.lineTo(W*0.44, H*0.19);
+  ctx.lineTo(W*0.60, H*0.36);
+  ctx.lineTo(W*0.78, H*0.22);
+  ctx.lineTo(W, H*0.40);
+  ctx.lineTo(W, H*0.70); ctx.lineTo(0, H*0.70);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(18,32,52,.85)';
+  ctx.fill();
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.moveTo(0, skyLine(0, W, H));
+  for(let i=1;i<=50;i++){
+    const u = i/50;
+    ctx.lineTo(u*W, skyLine(u, W, H));
+  }
+  ctx.lineTo(W, H);
+  ctx.lineTo(0, H);
+  ctx.closePath();
+  const rock = ctx.createLinearGradient(0, H*0.2, 0, H);
+  rock.addColorStop(0,'#1a2230');
+  rock.addColorStop(0.5,'#242b36');
+  rock.addColorStop(1,'#151a24');
+  ctx.fillStyle = rock;
+  ctx.fill();
+
+  ctx.save();
+  ctx.clip();
+  ctx.strokeStyle = 'rgba(255,255,255,0.028)';
+  ctx.lineWidth = 1;
+  for(let y=H*0.25; y<H; y+=26){
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W, y-14); ctx.stroke();
+  }
+  ctx.restore();
+
+  if(bandPath(ctx, W, 0, 1)){
+    const bedG = ctx.createLinearGradient(0, H*0.1, W, H*0.9);
+    bedG.addColorStop(0,'#3a3327');
+    bedG.addColorStop(0.5,'#4a3f2e');
+    bedG.addColorStop(1,'#3d3324');
+    ctx.fillStyle = bedG;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(140,120,90,.35)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  const looseAlpha = 1 - Math.min(0.85, DF.front * 0.9);
+  if(looseAlpha > 0.05){
+    const nLoose = Math.round(DF.looseAmt/100 * DF.loose.length);
+    ctx.save();
+    ctx.globalAlpha = looseAlpha;
+    for(let i=0;i<nLoose;i++){
+      const L = DF.loose[i];
+      const pos = gullyPos(L.t, L.off, W, H);
+      if(pos.y > H || pos.x < -20 || pos.x > W+20) continue;
+      ctx.save();
+      ctx.translate(pos.x, pos.y);
+      ctx.rotate(L.rot);
+      ctx.beginPath();
+      ctx.ellipse(0,0, L.r*1.25, L.r*0.85, 0, 0, Math.PI*2);
+      ctx.fillStyle = L.shade < 0.33 ? 'rgba(178,150,112,.92)'
+                    : L.shade < 0.66 ? 'rgba(145,124,96,.9)'
+                    : 'rgba(112,98,80,.88)';
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  if(DF.front > 0.008){
+    const tEnd = Math.min(1, DF.front);
+    if(bandPath(ctx, W, 0, tEnd)){
+      const mg = ctx.createLinearGradient(0, H*0.1, W, H*0.9);
+      mg.addColorStop(0,   'rgba(112,86,60,.95)');
+      mg.addColorStop(0.45,'rgba(150,114,76,.94)');
+      mg.addColorStop(1,   'rgba(122,94,66,.94)');
+      ctx.fillStyle = mg;
+      ctx.fill();
+
+      ctx.save();
+      ctx.clip();
+      const hl = ctx.createLinearGradient(0,0,0,H);
+      hl.addColorStop(0,'rgba(255,220,170,.16)');
+      hl.addColorStop(0.4,'rgba(255,220,170,0)');
+      ctx.fillStyle = hl;
+      ctx.fillRect(0,0,W,H);
+      ctx.restore();
+    }
+
+    const rockN = Math.round(DF.front * DF.looseAmt/100 * 90);
+    ctx.save();
+    for(let i=0;i<rockN;i++){
+      const seed = (i*0.6180339887) % 1;
+      const tt = seed * tEnd;
+      const off = Math.sin(i*12.9898)*0.8;
+      const pos = gullyPos(tt, off, W, H);
+      const r = 1.2 + (i%5)*0.55;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, r, 0, Math.PI*2);
+      ctx.fillStyle = i%3===0 ? 'rgba(88,70,52,.9)'
+                    : i%3===1 ? 'rgba(118,96,70,.88)'
+                    : 'rgba(70,58,44,.9)';
+      ctx.fill();
+    }
+    ctx.restore();
+
+    if(DF.front > 0.03 && DF.front < 1){
+      const head = gullyPos(DF.front, 0, W, H);
+      const hw = gullyHalf(DF.front, W);
+      ctx.save();
+      const hg = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, hw*1.5);
+      hg.addColorStop(0,'rgba(190,150,105,.95)');
+      hg.addColorStop(0.6,'rgba(148,112,76,.7)');
+      hg.addColorStop(1,'rgba(148,112,76,0)');
+      ctx.beginPath();
+      ctx.ellipse(head.x, head.y, hw*1.4, hw*1.05, 0, 0, Math.PI*2);
+      ctx.fillStyle = hg;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    for(const s of DF.splash){
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, s.life);
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(200,165,120,.85)';
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  if(DF.deposit > 1){
+    const cx0 = W*0.885, cy0 = H*0.775;
+    const rf = W*0.045 + Math.min(W*0.30, DF.deposit*0.75);
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(cx0, cy0);
+    ctx.arc(cx0, cy0, rf, -0.15, Math.PI*0.62);
+    ctx.closePath();
+    const fg = ctx.createRadialGradient(cx0, cy0, 0, cx0, cy0, rf);
+    fg.addColorStop(0,'rgba(170,132,90,.92)');
+    fg.addColorStop(0.65,'rgba(135,106,74,.85)');
+    fg.addColorStop(1,'rgba(110,88,64,.5)');
+    ctx.fillStyle = fg;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(220,185,135,.45)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    const nStone = Math.min(80, Math.floor(DF.deposit/6));
+    for(let i=0;i<nStone;i++){
+      const a = (i*2.399) % (Math.PI*0.7);
+      const rr = rf * (0.15 + ((i*0.37)%1)*0.8);
+      const x = cx0 + Math.cos(a)*rr*0.95;
+      const y = cy0 + Math.sin(a)*rr*0.95;
+      if(y > H || x > W) continue;
+      ctx.beginPath();
+      ctx.arc(x, y, 1 + (i%4)*0.6, 0, Math.PI*2);
+      ctx.fillStyle = i%2 ? 'rgba(90,72,54,.85)' : 'rgba(130,106,78,.85)';
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  if(DF.rain > 1){
+    const n = Math.round(DF.rain/100 * DF.drops.length);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(147,197,253,.5)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    for(let i=0;i<n;i++){
+      const p = DF.drops[i];
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x - p.len*0.25, p.y + p.len);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  if(DF.front > 0.55){
+    ctx.save();
+    const a = 0.26 + Math.sin(performance.now()/160)*0.2;
+    ctx.strokeStyle = `rgba(248,113,113,${a})`;
+    ctx.lineWidth = 5;
+    ctx.strokeRect(2.5,2.5,W-5,H-5);
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.font = '600 10.5px system-ui,sans-serif';
+  ctx.fillStyle = 'rgba(190,205,225,.55)';
+  const p1 = gullyCenter(0.12, W, H);
+  ctx.fillText('物源区', p1.x - 6, p1.y - 16);
+  const p2 = gullyCenter(0.5, W, H);
+  ctx.fillText('流通区', p2.x + 6, p2.y - 16);
+  if(DF.deposit > 8){
+    ctx.fillStyle = 'rgba(220,185,135,.7)';
+    ctx.fillText('堆积区', W*0.86, H*0.76);
+  }
+  ctx.restore();
+}
+
+/* 泥石流控件 */
+$('#rFRain').addEventListener('input', e => { DF.rain = +e.target.value; $('#vFRain').textContent = DF.rain+'%'; });
+$('#rLoose').addEventListener('input', e => { DF.looseAmt = +e.target.value; $('#vLoose').textContent = DF.looseAmt+'%'; });
+$('#rSlope').addEventListener('input', e => { DF.slope = +e.target.value; $('#vSlope').textContent = DF.slope+'°'; });
+$('#btnFlowReset').addEventListener('click', () => {
+  DF.front = 0; DF.deposit = 0; DF.splash = [];
+});
+
+/* ============================================================
+   三、防治演练（拖拽部署 + 音效反馈）
+   ============================================================ */
+const cvFix = $('#cvFix');
+const FIX = {
+  fs: 0.85,
+  applied: { drain:false, wall:false, cut:false, tree:false, monitor:false, move:false },
+  flash: {},
+  won: false
+};
+
+const MEASURES = {
+  drain:   { icon:'🕳️', name:'排水工程', gain:0.34 },
+  wall:    { icon:'🧱', name:'支挡工程', gain:0.44 },
+  cut:     { icon:'⛏️', name:'削坡减载', gain:0.38 },
+  tree:    { icon:'🌳', name:'坡面防护', gain:0.28 },
+  monitor: { icon:'📡', name:'监测预警', gain:0.16 },
+  move:    { icon:'🏠', name:'避让搬迁', gain:0.24 }
+};
+
+function recalcFix(){
+  let fs = 0.85;
+  for(const k in FIX.applied){
+    if(FIX.applied[k]) fs += MEASURES[k].gain;
+  }
+  FIX.fs = fs;
+}
+
+/* 浮动提示 */
+let toastTimer = null;
+function showToast(text, kind){
+  const el = $('#fixToast');
+  el.textContent = text;
+  el.className = 'toast show ' + kind;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    el.classList.remove('show');
+  }, 1500);
+}
+
+function drawHouse(ctx, x, y, s, alpha){
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = '#c9d4e4';
+  ctx.fillRect(x - s*0.5, y - s*0.62, s, s*0.62);
+  ctx.beginPath();
+  ctx.moveTo(x - s*0.62, y - s*0.6);
+  ctx.lineTo(x, y - s*1.05);
+  ctx.lineTo(x + s*0.62, y - s*0.6);
+  ctx.closePath();
+  ctx.fillStyle = '#f87171';
+  ctx.fill();
+  ctx.fillStyle = '#38bdf8';
+  ctx.fillRect(x - s*0.22, y - s*0.45, s*0.44, s*0.28);
+  ctx.restore();
+}
+
+function drawFix(){
+  const d = dims.get(cvFix);
+  if(!d || cvFix.offsetParent === null) return;
+  const { ctx, W, H } = d;
+  ctx.clearRect(0,0,W,H);
+
+  const t = performance.now()/1000;
+  const groundY = H * 0.84;
+  const slopeH = H * (FIX.applied.cut ? 0.32 : 0.50);
+  const ridgeY = groundY - slopeH;
+  const toeX = W * 0.68;
+
+  const sky = ctx.createLinearGradient(0,0,0,groundY);
+  sky.addColorStop(0,'#0a1424');
+  sky.addColorStop(0.6,'#16294a');
+  sky.addColorStop(1,'#1f3a5e');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,W,groundY);
+
+  ctx.save();
+  const gl = ctx.createRadialGradient(W*0.82, H*0.14, 0, W*0.82, H*0.14, W*0.22);
+  gl.addColorStop(0,'rgba(120,180,255,.16)');
+  gl.addColorStop(1,'rgba(120,180,255,0)');
+  ctx.fillStyle = gl;
+  ctx.fillRect(0,0,W,groundY);
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.moveTo(0, ridgeY + H*0.10);
+  ctx.lineTo(W*0.16, ridgeY - H*0.04);
+  ctx.lineTo(W*0.34, ridgeY + H*0.07);
+  ctx.lineTo(W*0.54, ridgeY - H*0.06);
+  ctx.lineTo(W*0.74, ridgeY + H*0.05);
+  ctx.lineTo(W, ridgeY - H*0.02);
+  ctx.lineTo(W, groundY); ctx.lineTo(0, groundY);
+  ctx.closePath();
+  ctx.fillStyle = '#101d33';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(0, groundY);
+  ctx.lineTo(W, groundY);
+  ctx.lineTo(W, H); ctx.lineTo(0, H);
+  ctx.closePath();
+  const gd = ctx.createLinearGradient(0, groundY, 0, H);
+  gd.addColorStop(0,'#3a3226');
+  gd.addColorStop(1,'#241d14');
+  ctx.fillStyle = gd;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(0, ridgeY);
+  ctx.lineTo(W*0.12, ridgeY);
+  ctx.lineTo(toeX, groundY);
+  ctx.lineTo(0, groundY);
+  ctx.closePath();
+  const soil = ctx.createLinearGradient(0, ridgeY, 0, groundY);
+  soil.addColorStop(0,'#7d6850');
+  soil.addColorStop(0.5,'#5f4d3a');
+  soil.addColorStop(1,'#41332a');
+  ctx.fillStyle = soil;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(0, ridgeY);
+  ctx.lineTo(W*0.12, ridgeY);
+  ctx.lineTo(toeX, groundY);
+  ctx.strokeStyle = 'rgba(200,220,255,.5)';
+  ctx.lineWidth = 2.2;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(0, ridgeY);
+  ctx.lineTo(W*0.12, ridgeY);
+  ctx.lineTo(toeX, groundY);
+  ctx.lineTo(0, groundY);
+  ctx.closePath();
+  ctx.clip();
+  ctx.strokeStyle = 'rgba(0,0,0,.11)';
+  ctx.lineWidth = 1;
+  for(let y=ridgeY+14; y<groundY; y+=20){
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W, y+8); ctx.stroke();
+  }
+  ctx.restore();
+
+  const toeY = groundY;
+
+  /* 排水工程 */
+  if(FIX.applied.drain){
+    ctx.save();
+    ctx.strokeStyle = 'rgba(56,189,248,.85)';
+    ctx.lineWidth = 3.2;
+    ctx.lineCap = 'round';
+    ctx.shadowColor = '#38bdf8';
+    ctx.shadowBlur = 8;
+    for(let i=0;i<3;i++){
+      const a = 0.28 + i*0.18;
+      const x1 = W*0.06 + i*W*0.16;
+      const y1 = ridgeY + (groundY-ridgeY)*a*0.9;
+      const x2 = x1 + W*0.14;
+      const y2 = y1 + H*0.09;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.font = '11px system-ui';
+    ctx.fillStyle = 'rgba(125,211,252,.9)';
+    ctx.fillText('💧 排水', W*0.05, ridgeY + (groundY-ridgeY)*0.22);
+    ctx.restore();
+  }
+
+  /* 坡面防护（树） */
+  if(FIX.applied.tree){
+    const n = 12;
+    for(let i=0;i<n;i++){
+      const tt = (i+0.6)/n;
+      const x = W*0.10 + (toeX - W*0.10)*tt;
+      const y = ridgeY + (groundY - ridgeY)*tt;
+      const sway = Math.sin(t*1.4 + i)*1.6;
+      drawTree(ctx, x + sway, y, 13 + Math.sin(i*1.7)*3);
+    }
+  }
+
+  /* 削坡减载 */
+  if(FIX.applied.cut){
+    ctx.save();
+    ctx.setLineDash([6,5]);
+    ctx.strokeStyle = 'rgba(251,191,36,.7)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(W*0.02, ridgeY - H*0.19);
+    ctx.lineTo(W*0.14, ridgeY - H*0.19);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = '11px system-ui';
+    ctx.fillStyle = 'rgba(251,191,36,.9)';
+    ctx.fillText('▼ 削坡减载', W*0.02, ridgeY - H*0.21);
+    ctx.restore();
+  }
+
+  /* 支挡工程 */
+  if(FIX.applied.wall){
+    const wW = W*0.075, wH = H*0.20;
+    const wx = toeX - wW*0.45, wy = toeY - wH;
+    ctx.save();
+    const wg = ctx.createLinearGradient(wx, wy, wx + wW, toeY);
+    wg.addColorStop(0,'#9aa5b5');
+    wg.addColorStop(0.5,'#6b7686');
+    wg.addColorStop(1,'#4a5464');
+    ctx.fillStyle = wg;
+    ctx.fillRect(wx, wy, wW, wH);
+    ctx.strokeStyle = 'rgba(220,235,255,.6)';
+    ctx.lineWidth = 1.6;
+    ctx.strokeRect(wx, wy, wW, wH);
+    ctx.strokeStyle = 'rgba(0,0,0,.18)';
+    ctx.lineWidth = 1;
+    for(let yy = wy + wH/5; yy < toeY; yy += wH/5){
+      ctx.beginPath(); ctx.moveTo(wx, yy); ctx.lineTo(wx+wW, yy); ctx.stroke();
+    }
+    for(let xx = wx + wW/3; xx < wx+wW; xx += wW/3){
+      ctx.beginPath(); ctx.moveTo(xx, wy); ctx.lineTo(xx, toeY); ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(56,189,248,.65)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(wx, wy + wH*0.25);
+    ctx.lineTo(wx - W*0.13, wy - H*0.07);
+    ctx.moveTo(wx, wy + wH*0.6);
+    ctx.lineTo(wx - W*0.10, wy + H*0.02);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /* 监测预警 */
+  if(FIX.applied.monitor){
+    const mx = W*0.30, my = ridgeY + (groundY-ridgeY)*0.32;
+    ctx.save();
+    ctx.strokeStyle = '#c9d4e4';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(mx, my);
+    ctx.lineTo(mx, my - H*0.11);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(mx, my - H*0.125, 4.5, 0, Math.PI*2);
+    ctx.fillStyle = '#c9d4e4';
+    ctx.fill();
+    const pulse = (Math.sin(t*3)+1)/2;
+    for(let i=0;i<3;i++){
+      ctx.beginPath();
+      ctx.arc(mx, my - H*0.125, 9 + i*7 + pulse*5, -Math.PI*0.85, -Math.PI*0.15);
+      ctx.strokeStyle = `rgba(74,222,128,${0.75 - i*0.2})`;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    ctx.font = '10.5px system-ui';
+    ctx.fillStyle = 'rgba(74,222,128,.9)';
+    ctx.fillText('📡 监测', mx - 14, my + 14);
+    ctx.restore();
+  }
+
+  /* 村庄 */
+  if(FIX.applied.move){
+    for(let i=0;i<3;i++){
+      drawHouse(ctx, W*0.86 + i*W*0.045, groundY + H*0.06, W*0.032, 1);
+    }
+    ctx.save();
+    ctx.setLineDash([5,4]);
+    ctx.strokeStyle = 'rgba(74,222,128,.7)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(W*0.76, groundY + H*0.02);
+    ctx.lineTo(W*0.84, groundY + H*0.055);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(W*0.84, groundY + H*0.055);
+    ctx.lineTo(W*0.825, groundY + H*0.045);
+    ctx.lineTo(W*0.833, groundY + H*0.072);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(74,222,128,.8)';
+    ctx.fill();
+    ctx.font = '10.5px system-ui';
+    ctx.fillStyle = 'rgba(74,222,128,.9)';
+    ctx.fillText('安全区', W*0.85, groundY + H*0.115);
+    ctx.restore();
+  } else {
+    const wobble = FIX.fs < 1 ? Math.sin(t*9)*1.3 : 0;
+    for(let i=0;i<3;i++){
+      drawHouse(ctx, W*0.735 + i*W*0.045 + wobble*(i%2?1:-1),
+                groundY, W*0.032, 1);
+    }
+    if(FIX.fs < 1.05){
+      ctx.save();
+      const a = 0.55 + Math.sin(t*4)*0.35;
+      ctx.font = 'bold 13px system-ui';
+      ctx.fillStyle = `rgba(248,113,113,${a})`;
+      ctx.fillText('⚠ 危险区', W*0.72, groundY - H*0.04);
+      ctx.restore();
+    }
+  }
+
+  /* 坡脚警戒线 */
+  ctx.save();
+  ctx.setLineDash([4,4]);
+  ctx.strokeStyle = FIX.fs >= 1.25
+    ? 'rgba(74,222,128,.35)'
+    : 'rgba(248,113,113,.35)';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(0, groundY);
+  ctx.lineTo(W, groundY);
+  ctx.stroke();
+  ctx.restore();
+
+  /* 刚部署的闪烁 */
+  for(const k in FIX.flash){
+    const v = FIX.flash[k];
+    if(v <= 0) continue;
+    FIX.flash[k] = v - 0.016;
+    if(FIX.flash[k] <= 0) delete FIX.flash[k];
+  }
+
+  /* 安全标识 */
+  if(FIX.fs >= 1.25){
+    ctx.save();
+    const a = 0.75 + Math.sin(t*2.2)*0.2;
+    ctx.font = 'bold 15px system-ui';
+    ctx.fillStyle = `rgba(74,222,128,${a})`;
+    ctx.fillText('✔ 坡体已稳定', W*0.04, H*0.13);
+    ctx.restore();
+  }
+
+  const el = $('#fixFs');
+  el.textContent = FIX.fs.toFixed(2);
+  el.style.color = FIX.fs >= 1.25 ? '#4ade80'
+                 : FIX.fs >= 1.0  ? '#fbbf24'
+                 : '#f87171';
+}
+
+/* ---- 拖拽逻辑 ---- */
+let dragCard = null, ghostEl = null, dragOff = {x:0,y:0};
+
+$$('.m-card').forEach(card => {
+  card.addEventListener('pointerdown', e => {
+    if(card.classList.contains('used')) return;
+    e.preventDefault();
+    dragCard = card;
+
+    const r = card.getBoundingClientRect();
+    dragOff.x = e.clientX - r.left;
+    dragOff.y = e.clientY - r.top;
+
+    ghostEl = document.createElement('div');
+    ghostEl.className = 'ghost-card';
+    ghostEl.innerHTML = card.innerHTML;
+    ghostEl.style.width = r.width + 'px';
+    ghostEl.style.left = (e.clientX - dragOff.x) + 'px';
+    ghostEl.style.top  = (e.clientY - dragOff.y) + 'px';
+    document.body.appendChild(ghostEl);
+
+    $('#fixStage').classList.add('hot');
+    $('#fixTip').classList.add('hide');
+
+    sfxPick();
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  });
+});
+
+function onPointerMove(e){
+  if(!ghostEl) return;
+  ghostEl.style.left = (e.clientX - dragOff.x) + 'px';
+  ghostEl.style.top  = (e.clientY - dragOff.y) + 'px';
+}
+
+function onPointerUp(e){
+  window.removeEventListener('pointermove', onPointerMove);
+  window.removeEventListener('pointerup', onPointerUp);
+
+  if(ghostEl){ ghostEl.remove(); ghostEl = null; }
+  $('#fixStage').classList.remove('hot');
+
+  if(!dragCard) return;
+
+  const rect = cvFix.getBoundingClientRect();
+  const inside = e.clientX >= rect.left && e.clientX <= rect.right &&
+                 e.clientY >= rect.top  && e.clientY <= rect.bottom;
+
+  if(inside){
+    const key = dragCard.dataset.m;
+    const isNew = !FIX.applied[key];
+    applyMeasure(key);
+    dragCard.classList.add('used');
+    const pip = document.querySelector(`.progress i[data-p="${key}"]`);
+    if(pip) pip.classList.add('done');
+
+    /* 🔊 正确音效 */
+    if(isNew){
+      sfxSuccess();
+      showToast('✅ 正确！' + MEASURES[key].name + ' 已部署  Fs +' +
+                MEASURES[key].gain.toFixed(2), 'ok');
+    }
+
+    /* 🏆 全部完成检测 */
+    checkAllDone();
+
+  } else {
+    /* ❌ 拖到坡体外 */
+    sfxError();
+    const st = $('#fixStage');
+    st.classList.add('err');
+    setTimeout(() => st.classList.remove('err'), 420);
+    showToast('❌ 请把措施拖到坡体范围内', 'err');
+    $('#fixTip').classList.remove('hide');
+  }
+  dragCard = null;
+}
+
+function applyMeasure(key){
+  if(FIX.applied[key]) return;
+  FIX.applied[key] = true;
+  FIX.flash[key] = 1;
+  recalcFix();
+}
+
+/* 完成全部 6 项时触发胜利音效 */
+function checkAllDone(){
+  const all = Object.keys(FIX.applied).every(k => FIX.applied[k]);
+  if(all && !FIX.won){
+    FIX.won = true;
+    setTimeout(() => {
+      sfxVictory();
+      showToast('🏆 全部措施部署完毕！坡体已安全稳定', 'win');
+    }, 420);
+  }
+}
+
+/* 重置 */
+$('#btnFixReset').addEventListener('click', () => {
+  for(const k in FIX.applied) FIX.applied[k] = false;
+  FIX.flash = {};
+  FIX.won = false;
+  recalcFix();
+  $$('.m-card').forEach(c => c.classList.remove('used'));
+  $$('.progress i').forEach(i => i.classList.remove('done'));
+  $('#fixTip').classList.remove('hide');
+  showToast('↺ 已重置，请重新部署防治措施', 'ok');
+  /* 重置时轻响 */
+  ensureAudio();
+  tone(440, 0, 0.10, 'sine', 0.14);
+  tone(330, 0.08, 0.16, 'sine', 0.12);
+});
+
+/* ============================================================
+   尺寸 & 主循环
+   ============================================================ */
+function resizeAll(){
+  resizeCanvas(cvSlide);
+  resizeCanvas(cvFlow);
+  resizeCanvas(cvFix);
+  initRain();
+  initDebris();
+}
+
+let last = performance.now();
+function loop(ts){
+  const dt = Math.min(0.05, (ts - last)/1000) || 0;
+  last = ts;
+
+  updateSlide(dt);
+  drawSlide();
+
+  updateFlow(dt);
+  drawFlow();
+
+  drawFix();
+
+  requestAnimationFrame(loop);
+}
+
+window.addEventListener('resize', () => { requestAnimationFrame(resizeAll); });
+window.addEventListener('load', () => {
+  recalcFix();
+  resizeAll();
+  requestAnimationFrame(loop);
+});
+if(document.fonts && document.fonts.ready){
+  document.fonts.ready.then(() => resizeAll());
+}
+$$('.tab').forEach(t => t.addEventListener('click', () => {
+  setTimeout(resizeAll, 60);
+}));
+</script>
+</body>
+</html>
